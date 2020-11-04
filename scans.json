@@ -1,0 +1,10 @@
+[
+	{
+		"folder":"My Scans",
+		"scans": ["all"]
+	},
+	{
+		"folder":"DefenseStorm",
+		"scans": ["all"]
+	}
+]

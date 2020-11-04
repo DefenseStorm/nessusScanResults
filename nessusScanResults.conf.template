@@ -1,0 +1,15 @@
+
+
+[json]
+app_name = Nessus Scanner
+version = 1.0
+
+[nessus]
+pid_file = pidfile
+state_dir = ./state
+user =
+password =
+scanner = 127.0.0.1
+scan_list = scans.json
+sleep_period = 5
+days_ago = 30
