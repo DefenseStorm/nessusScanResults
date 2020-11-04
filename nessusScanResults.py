@@ -195,7 +195,7 @@ class integration(object):
         return scan_list
 
 
-    def send_scan_to_grid(self, filename):
+    def send_scan_to_grid(self, filename, scan_time):
         event_list = []
         with open(filename, 'r') as f:
             dicted = csv.DictReader(f)
@@ -206,8 +206,9 @@ class integration(object):
                         entry[key] = "None"
                 entry['message'] = 'Scan Result - ' + entry['Synopsis']
                 entry['scanner'] = self.scanner
+                entry['timestamp'] = scan_time
                 #entry['hostname'] = entry['host']
-                self.ds.writeJSONEvent(entry)
+                self.ds.writeJSONEvent(entry, flatten = False)
 
     def nessus_main(self): 
 
@@ -252,11 +253,12 @@ class integration(object):
 
 
         for scan in self.scan_download_list:
-            filename = scan['folder'] + '-' + scan['name'] + '-' + (datetime.utcfromtimestamp(int(scan['last_modification_date']))).strftime('%Y-%m-%d %H:%M:%S') + 'Z'
+            scan_time = (datetime.utcfromtimestamp(int(scan['last_modification_date']))).strftime('%Y-%m-%dT%H:%M:%S') + 'Z'
+            filename = scan['folder'] + '-' + scan['name'] + '-' + scan_time
             self.get_scan(scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='nessus')
             self.get_scan(scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='csv')
 
-            self.send_scan_to_grid(filename=filename.replace(' ', '_')+".csv")
+            self.send_scan_to_grid(filename=filename.replace(' ', '_')+".csv", scan_time = scan_time)
 
 
         self.ds.set_state(self.state_dir, self.current_run)
@@ -291,6 +293,8 @@ class integration(object):
         print
         print ('  -l    Log to stdout instead of syslog Local6')
         print
+        print ('  -a    Generate a .csv file that can be used for Asset Import in Grid')
+        print
     
     def __init__(self, argv):
 
@@ -298,11 +302,11 @@ class integration(object):
         self.send_syslog = True
         self.ds = None
         self.conf_file = None
-
         self.conn_url = None
+        self.gen_assets_file = False
     
         try:
-            opts, args = getopt.getopt(argv,"htnld:c:",["datedir="])
+            opts, args = getopt.getopt(argv,"htnlac:",["datedir="])
         except getopt.GetoptError:
             self.usage()
             sys.exit(2)
@@ -316,6 +320,8 @@ class integration(object):
                 self.send_syslog = False
             elif opt in ("-c"):
                 self.conf_file = arg
+            elif opt in ("-a"):
+                self.gen_assets_file = True
     
         try:
             self.ds = DefenseStorm('nessusScanResults', testing=self.testing, send_syslog = self.send_syslog, config_file = self.conf_file)
