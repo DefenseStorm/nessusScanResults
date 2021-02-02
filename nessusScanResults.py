@@ -265,13 +265,13 @@ class integration(object):
         for scan in self.scan_download_list:
             scan_time = (datetime.utcfromtimestamp(int(scan['last_modification_date']))).strftime('%Y-%m-%dT%H:%M:%S') + 'Z'
             filename = scan['folder'] + '-' + scan['name'] + '-' + scan_time
-            self.get_scan(scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='nessus')
+            #self.get_scan(scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='nessus')
             self.get_scan(scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='csv')
 
             self.send_scan_to_grid(filename=filename.replace(' ', '_')+".csv", scan_time = scan_time)
             if not self.keep_files:
                 os.remove(filename.replace(' ', '_')+".csv")
-                os.remove(filename.replace(' ', '_')+".nessus")
+                os.remov#e(filename.replace(' ', '_')+".nessus")
 
 
         self.ds.set_state(self.state_dir, self.current_run)
