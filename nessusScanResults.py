@@ -196,19 +196,29 @@ class integration(object):
 
 
     def send_scan_to_grid(self, filename, scan_time):
-        event_list = []
+        asset_list = []
         with open(filename, 'r') as f:
             dicted = csv.DictReader(f)
             vulns = list(dicted)
             for entry in vulns:
+                asset = {}
                 for key in entry:
                     if entry[key] == "":
                         entry[key] = "None"
                 entry['message'] = 'Scan Result - ' + entry['Synopsis']
                 entry['scanner'] = self.scanner
                 entry['timestamp'] = scan_time
-                #entry['hostname'] = entry['host']
                 self.ds.writeJSONEvent(entry, flatten = False)
+                if self.gen_assets_file:
+                    asset['Name'] = ''
+                    asset['Owner'] = ''
+                    asset['Hostnames'] = ''
+                    asset['IP Addresses'] = entry['ip address']
+                    asset['MAC Addresses'] = ''
+                    asset['Importance'] = ''
+                    asset['Labels'] = ''
+                    asset['Description'] = ''
+                    asset_list.append(asset)
 
     def nessus_main(self): 
 
@@ -259,6 +269,9 @@ class integration(object):
             self.get_scan(scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='csv')
 
             self.send_scan_to_grid(filename=filename.replace(' ', '_')+".csv", scan_time = scan_time)
+            if not self.keep_files:
+                os.remove(filename.replace(' ', '_')+".csv")
+                os.remove(filename.replace(' ', '_')+".nessus")
 
 
         self.ds.set_state(self.state_dir, self.current_run)
@@ -282,19 +295,14 @@ class integration(object):
             return
     
     def usage(self):
-        print
         print (os.path.basename(__file__))
-        print
-        print ('  No Options: Run a normal cycle')
-        print
+        print ('\n  No Options: Run a normal cycle\n')
         print ('  -t    Testing mode.  Do all the work but do not send events to GRID via ')
         print ('        syslog Local7.  Instead write the events to file \'output.TIMESTAMP\'')
-        print ('        in the current directory')
-        print
-        print ('  -l    Log to stdout instead of syslog Local6')
-        print
-        print ('  -a    Generate a .csv file that can be used for Asset Import in Grid')
-        print
+        print ('        in the current directory\n')
+        print ('  -l    Log to stdout instead of syslog Local6\n')
+        print ('  -a    Generate a .csv file that can be used for Asset Import in Grid\n')
+        print ('  -k    Keep scan files (.nessus and .csv files)\n')
     
     def __init__(self, argv):
 
@@ -304,9 +312,10 @@ class integration(object):
         self.conf_file = None
         self.conn_url = None
         self.gen_assets_file = False
+        self.keep_files = False
     
         try:
-            opts, args = getopt.getopt(argv,"htnlac:",["datedir="])
+            opts, args = getopt.getopt(argv,"htlkac:")
         except getopt.GetoptError:
             self.usage()
             sys.exit(2)
@@ -322,6 +331,8 @@ class integration(object):
                 self.conf_file = arg
             elif opt in ("-a"):
                 self.gen_assets_file = True
+            elif opt in ("-k"):
+                self.keep_files = True
     
         try:
             self.ds = DefenseStorm('nessusScanResults', testing=self.testing, send_syslog = self.send_syslog, config_file = self.conf_file)
