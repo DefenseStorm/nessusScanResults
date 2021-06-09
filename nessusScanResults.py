@@ -271,7 +271,7 @@ class integration(object):
             self.send_scan_to_grid(filename=filename.replace(' ', '_')+".csv", scan_time = scan_time)
             if not self.keep_files:
                 os.remove(filename.replace(' ', '_')+".csv")
-                os.remov#e(filename.replace(' ', '_')+".nessus")
+                #os.remove(filename.replace(' ', '_')+".nessus")
 
 
         self.ds.set_state(self.state_dir, self.current_run)
