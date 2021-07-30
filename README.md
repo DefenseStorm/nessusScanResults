@@ -20,6 +20,9 @@ cp nessusScanResults.conf.template nessusScanResults.conf
 
 change the following items in the config file based on your configuration token console site
 
+Add these modules if they are not yet there:
+apt-get install python3-requests
+
 Add the following entry to the root crontab so the script will run every 5 minutes.
 
 */5 * * * * cd /usr/local/nessusScanResults; ./nessusScanResults.py
