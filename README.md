@@ -5,7 +5,7 @@ to pull this repository and submodules:
 git clone --recurse-submodules https://github.com/DefenseStorm/nessusScanResults.git
 
 If this is the first integration on this DVM, Do the following:
-cp ds-integration/ds_events.conf to /etc/syslog-ng/conf.d
+cp ds-integration/ds_events.conf /etc/syslog-ng/conf.d
 
 Edit /etc/syslog-ng/syslog-ng.conf and add local7 to the excluded list for filter f_syslog3 and filter f_messages. The lines should look like the following:
 
