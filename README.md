@@ -20,6 +20,11 @@ cp nessusScanResults.conf.template nessusScanResults.conf
 
 change the following items in the config file based on your configuration token console site
 
+user = <Nessus Scanner local username>
+password = <Nessus Scanner local password>
+scanner = <comma separated list of scanners (no spaces)
+scan_list = scans.json (customize if needed)
+
 Add these modules if they are not yet there:
 apt-get install python3-requests
 

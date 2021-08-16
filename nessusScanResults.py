@@ -62,8 +62,9 @@ class integration(object):
     }
 
 
-    def get_token(self):
-        token_url = self.url + "/session"
+    def get_token(self, scanner):
+        url = "https://" + scanner + ":8834"
+        token_url = url + "/session"
         TOKENPARAMS = {'username':self.user, 'password':self.password}
         try:
             r = requests.post(url = token_url, data = TOKENPARAMS, verify = False)
@@ -72,7 +73,7 @@ class integration(object):
             return None
         if not r or r.status_code != 200:
             self.ds.log('WARNING',
-                    "Received unexpected " + str(r) + " response from Cb Defense Server {0}.".format(
+                    "Received unexpected " + str(r) + " response from Nessus Server {0}.".format(
                     token_url))
             return None
         try:
@@ -84,8 +85,8 @@ class integration(object):
                 self.ds.log("ERROR", "Failed to get token")
                 self.ds.log('ERROR', "Exception {0}".format(str(e)))
 
-    def get_folders(self):
-        URL=self.url+"/folders"
+    def get_folders(self, scanner):
+        URL = "https://" + scanner + ":8834" + '/folders'
         try:
             t = requests.get(url = URL, headers=self.headers, verify = False)
         except Exception as e:
@@ -93,17 +94,17 @@ class integration(object):
             return None
         if not t or t.status_code != 200:
             self.ds.log('WARNING',
-                    "Received unexpected " + str(t) + " response from Cb Defense Server {0}.".format(
+                    "Received unexpected " + str(t) + " response from Nessus Server {0}.".format(
                     URL))
             return None
         jsonFolder = t.json()
         return jsonFolder['folders']
 
-    def get_scan_list(self, folder_id):
+    def get_scan_list(self, scanner, folder_id):
         # Look for scans from upToThisManyDaysAgo from GET /scans request
         epochTime = time.time()
         splitDay = str(self.last_run).split('.',-1)
-        URL = self.url + "/scans?folder_id=" + folder_id + "&last_modification_date=" +splitDay[0]
+        URL = "https://" + scanner + ":8834" + "/scans?folder_id=" + folder_id + "&last_modification_date=" +splitDay[0]
         try:
             t = requests.get(url = URL, headers=self.headers, verify = False)
         except Exception as e:
@@ -111,16 +112,16 @@ class integration(object):
             return None
         if not t or t.status_code != 200:
             self.ds.log('WARNING',
-                    "Received unexpected " + str(t) + " response from Cb Defense Server {0}.".format(
+                    "Received unexpected " + str(t) + " response from Nessus Server {0}.".format(
                     URL))
             return None
         data = t.json()
         return data['scans']
 
-    def get_scan(self, scan_id, outfile, out_format = 'nessus'):
+    def get_scan(self, scanner, scan_id, outfile, out_format = 'nessus'):
 
         outfile = outfile + '.' + out_format
-        URL = self.url + "/scans/" + str(scan_id) + "/export"
+        URL = "https://" + scanner + ":8834" + "/scans/" + str(scan_id) + "/export"
         this_payload = self.payload
         this_payload['format'] = out_format
         try:
@@ -130,7 +131,7 @@ class integration(object):
             return None
         if not r or r.status_code != 200:
             self.ds.log('WARNING',
-                    "Received unexpected " + str(r) + " response from Cb Defense Server {0}.".format(
+                    "Received unexpected " + str(r) + " response from Nessus Server {0}.".format(
                     URL))
             return None
 
@@ -139,7 +140,7 @@ class integration(object):
         scanToken = str(jsonData['token'])
         status = "loading"
         while status != 'ready':
-            URL = self.url + "/scans/" +str(scan_id) + "/export/" + scanFile + "/status"
+            URL = "https://" + scanner + ":8834" + "/scans/" +str(scan_id) + "/export/" + scanFile + "/status"
             try:
                 t = requests.get(url = URL, headers=self.headers, verify = False)
             except Exception as e:
@@ -147,7 +148,7 @@ class integration(object):
                 return None
             if not t or t.status_code != 200:
                 self.ds.log('WARNING',
-                    "Received unexpected " + str(t) + " response from Cb Defense Server {0}.".format(
+                    "Received unexpected " + str(t) + " response from Nessus Server {0}.".format(
                     URL))
                 return None
             data = t.json()
@@ -155,7 +156,7 @@ class integration(object):
                 status = data['status']
             else:
                 time.sleep(int(self.sleep_period))
-        URL = self.url + "/scans/" + str(scan_id) + "/export/" + scanFile + "/download"
+        URL = "https://" + scanner + ":8834" + "/scans/" + str(scan_id) + "/export/" + scanFile + "/download"
         try:
             d = requests.get(url = URL, headers=self.headers, verify = False)
         except Exception as e:
@@ -163,17 +164,17 @@ class integration(object):
             return None
         if not d or d.status_code != 200:
             self.ds.log('WARNING',
-                    "Received unexpected " + str(d) + " response from Cb Defense Server {0}.".format(
+                    "Received unexpected " + str(d) + " response from Nessus Server {0}.".format(
                     URL))
             return None
         f = open(outfile, 'wb').write(d.content)
 
-    def get_scan_download_list(self, folders):
+    def get_scan_download_list(self, scanner, folders):
         scan_download_list = []
         for folder in folders:
             for item in self.scan_list:
                 if item['folder'] == folder['name']:
-                    scan_list = self.get_scan_list(str(folder['id']))
+                    scan_list = self.get_scan_list(scanner, str(folder['id']))
                     if scan_list != None:
                         for scan in scan_list:
                             if scan['status'] == 'completed':
@@ -226,19 +227,13 @@ class integration(object):
         try:
             self.user = self.ds.config_get('nessus', 'user')
             self.password = self.ds.config_get('nessus', 'password')
-            self.scanner = self.ds.config_get('nessus', 'scanner')
+            self.scanner_list = self.ds.config_get('nessus', 'scanner').split(',')
             self.state_dir = self.ds.config_get('nessus', 'state_dir')
             self.scan_list_file = self.ds.config_get('nessus', 'scan_list')
             self.sleep_period = self.ds.config_get('nessus', 'sleep_period')
             self.days_ago = self.ds.config_get('nessus', 'days_ago')
             self.last_run = self.ds.get_state(self.state_dir)
-            self.url = "https://" + self.scanner + ":8834"
-            self.token = self.get_token()
-            if self.token == None:
-                self.ds.log('ERROR', "Failed to get token")
-                return
 
-            self.headers = {'X-Cookie': self.token, 'Content-type': 'application/json', 'Accept': 'text/plain'}
             self.time_format = "%Y-%m-%d %H:%M:%S"
 
             current_time = time.time()
@@ -255,27 +250,35 @@ class integration(object):
 
 
         self.scan_list = self.get_scans_list(self.scan_list_file)
-        folders = self.get_folders()
-        if folders == None:
-            self.ds.log('ERROR', "No folders found")
-            return
-        self.scan_download_list = self.get_scan_download_list(folders)
+        for scanner in self.scanner_list:
+
+            self.token = self.get_token(scanner)
+            if self.token == None:
+                self.ds.log('ERROR', "Failed to get token for scanner: " + scanner)
+                return
+            self.headers = {'X-Cookie': self.token, 'Content-type': 'application/json', 'Accept': 'text/plain'}
+
+            folders = self.get_folders(scanner)
+            if folders == None:
+                self.ds.log('ERROR', "No folders found")
+                return
+            self.scan_download_list = self.get_scan_download_list(scanner, folders)
 
 
-        for scan in self.scan_download_list:
-            scan_time = (datetime.utcfromtimestamp(int(scan['last_modification_date']))).strftime('%Y-%m-%dT%H:%M:%S') + 'Z'
-            filename = scan['folder'] + '-' + scan['name'] + '-' + scan_time
-            #self.get_scan(scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='nessus')
-            self.get_scan(scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='csv')
+            for scan in self.scan_download_list:
+                scan_time = (datetime.utcfromtimestamp(int(scan['last_modification_date']))).strftime('%Y-%m-%dT%H:%M:%S') + 'Z'
+                filename = scan['folder'] + '-' + scan['name'] + '-' + scan_time
+                #self.get_scan(scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='nessus')
+                self.get_scan(scanner, scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='csv')
+    
+                self.send_scan_to_grid(filename=filename.replace(' ', '_')+".csv", scan_time = scan_time)
+                if not self.keep_files:
+                    os.remove(filename.replace(' ', '_')+".csv")
+                    #os.remove(filename.replace(' ', '_')+".nessus")
 
-            self.send_scan_to_grid(filename=filename.replace(' ', '_')+".csv", scan_time = scan_time)
-            if not self.keep_files:
-                os.remove(filename.replace(' ', '_')+".csv")
-                #os.remove(filename.replace(' ', '_')+".nessus")
 
-
-        self.ds.set_state(self.state_dir, self.current_run)
-        self.ds.log('INFO', "Done Sending Notifications")
+            self.ds.set_state(self.state_dir, self.current_run)
+            self.ds.log('INFO', "Done Sending Notifications")
 
 
     def run(self):
