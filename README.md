@@ -28,6 +28,6 @@ scan_list = scans.json (customize if needed)
 Add these modules if they are not yet there:
 apt-get install python3-requests
 
-Add the following entry to the root crontab so the script will run every 5 minutes.
+Add the following entry to the root crontab so the script will run every day at 2am.
 
-*/5 * * * * cd /usr/local/nessusScanResults; ./nessusScanResults.py
+0 2 * * * cd /usr/local/nessusScanResults; ./nessusScanResults.py
