@@ -98,6 +98,7 @@ class integration(object):
                     URL))
             return None
         jsonFolder = t.json()
+        self.ds.log('INFO', 'Folders: ' + str(jsonFolder))
         return jsonFolder['folders']
 
     def get_scan_list(self, scanner, folder_id):
