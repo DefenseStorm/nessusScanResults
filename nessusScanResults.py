@@ -197,7 +197,7 @@ class integration(object):
         return scan_list
 
 
-    def send_scan_to_grid(self, filename, scan_time):
+    def send_scan_to_grid(self, scanner, filename, scan_time):
         asset_list = []
         with open(filename, 'r') as f:
             dicted = csv.DictReader(f)
@@ -208,7 +208,7 @@ class integration(object):
                     if entry[key] == "":
                         entry[key] = "None"
                 entry['message'] = 'Scan Result - ' + entry['Synopsis']
-                entry['scanner'] = self.scanner
+                entry['scanner'] = scanner
                 entry['timestamp'] = scan_time
                 self.ds.writeJSONEvent(entry, flatten = False)
                 if self.gen_assets_file:
@@ -272,7 +272,7 @@ class integration(object):
                 #self.get_scan(scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='nessus')
                 self.get_scan(scanner, scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='csv')
     
-                self.send_scan_to_grid(filename=filename.replace(' ', '_')+".csv", scan_time = scan_time)
+                self.send_scan_to_grid(scanner, filename=filename.replace(' ', '_')+".csv", scan_time = scan_time)
                 if not self.keep_files:
                     os.remove(filename.replace(' ', '_')+".csv")
                     #os.remove(filename.replace(' ', '_')+".nessus")
