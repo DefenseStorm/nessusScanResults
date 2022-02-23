@@ -81,9 +81,10 @@ class integration(object):
             token = str("token="+jsonData['token'])
             return token
         except Exception as e:
-                traceback.print_exc()
                 self.ds.logger.error("Failed to get token")
                 self.ds.logger.error("Exception {0}".format(str(e)))
+                self.ds.logger.error("%s" %(traceback.format_exc().replace('\n',';')))
+
 
     def get_folders(self, scanner):
         URL = "https://" + scanner + ":8834" + '/folders'
@@ -191,9 +192,9 @@ class integration(object):
             with open(filename) as json_file:
                     scan_list = json.load(json_file)
         except Exception as e:
-            traceback.print_exc()
             self.ds.logger.error("Failed to load db_json_file + " + filename)
             self.ds.logger.error("Exception {0}".format(str(e)))
+            self.ds.logger.error("%s" %(traceback.format_exc().replace('\n',';')))
         return scan_list
 
 
@@ -271,9 +272,9 @@ class integration(object):
                 self.last_run = current_time - ( 60 * 60 * 24 * int(self.days_ago))
             self.current_run = current_time
         except Exception as e:
-                traceback.print_exc()
                 self.ds.logger.error("Failed to get required configurations")
                 self.ds.logger.error("Exception {0}".format(str(e)))
+                self.ds.logger.error("%s" %(traceback.format_exc().replace('\n',';')))
 
         try:
             self.grid_secret = self.ds.config_get('grid', 'secret')
@@ -304,15 +305,12 @@ class integration(object):
                 scan_time = (datetime.utcfromtimestamp(int(scan['last_modification_date']))).strftime('%Y-%m-%dT%H:%M:%S') + 'Z'
                 filename = scan['folder'] + '-' + scan['name'] + '-' + scan_time
                 filename  = filename.replace(' ', '_')
-                print('upload scans: ' + str(self.upload_scans_to_grid))
                 if self.upload_scans_to_grid:
                     nessus_filename  = filename + ".nessus"
                     self.get_scan(scanner, scan_id = scan['id'], outfile=filename, out_format = 'nessus')
                     self.upload_nessus_to_ticket(nessus_filename)
-                    print('keep files: ' + str(self.keep_files))
                     if not self.keep_files:
                         os.remove(nessus_filename)
-                print('ingest events: ' + str(self.ingest_events))
                 if self.ingest_events:
                     csv_filename  = filename+".csv"
                     self.get_scan(scanner, scan_id = scan['id'], outfile=filename, out_format = 'csv')
@@ -337,8 +335,8 @@ class integration(object):
                 sys.exit(0)
             self.nessus_main()
         except Exception as e:
-            traceback.print_exc()
             self.ds.logger.error("Exception {0}".format(str(e)))
+            self.ds.logger.error("%s" %(traceback.format_exc().replace('\n',';')))
             return
     
     def usage(self):
