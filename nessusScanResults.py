@@ -222,9 +222,9 @@ class integration(object):
                     asset['Description'] = ''
                     asset_list.append(asset)
 
-    def upload_nessus_to_ticket(file_name):
+    def upload_nessus_to_ticket(self, file_name):
 
-        tickets = self.ds.searchTickets(criteria = {"state":["Open"],"task_schedule_id":self.ds.config_get('grid', 'task_schedule_id')})
+        tickets = self.ds.searchTickets(criteria = {"state":["Open"],"task_schedule_id":self.grid_task_schedule_id})
         if tickets == None:
             self.ds.logger.error('Error searching tickets')
         this_ticket = None
@@ -303,14 +303,19 @@ class integration(object):
             for scan in self.scan_download_list:
                 scan_time = (datetime.utcfromtimestamp(int(scan['last_modification_date']))).strftime('%Y-%m-%dT%H:%M:%S') + 'Z'
                 filename = scan['folder'] + '-' + scan['name'] + '-' + scan_time
-                if self.upload_scan_to_grid:
-                    nessus_filename  = filename.replace(' ', '_')+".nessus"
-                    self.get_scan(scan_id = scan['id'], outfile=nessus_filename)
+                filename  = filename.replace(' ', '_')
+                print('upload scans: ' + str(self.upload_scans_to_grid))
+                if self.upload_scans_to_grid:
+                    nessus_filename  = filename + ".nessus"
+                    self.get_scan(scanner, scan_id = scan['id'], outfile=filename, out_format = 'nessus')
+                    self.upload_nessus_to_ticket(nessus_filename)
+                    print('keep files: ' + str(self.keep_files))
                     if not self.keep_files:
                         os.remove(nessus_filename)
+                print('ingest events: ' + str(self.ingest_events))
                 if self.ingest_events:
-                    csv_filename  = filename.replace(' ', '_')+".csv"
-                    self.get_scan(scanner, scan_id = scan['id'], outfile=csv_filename)
+                    csv_filename  = filename+".csv"
+                    self.get_scan(scanner, scan_id = scan['id'], outfile=filename, out_format = 'csv')
     
                     self.send_scan_to_grid(scanner, filename=csv_filename, scan_time = scan_time)
                     if not self.keep_files:
