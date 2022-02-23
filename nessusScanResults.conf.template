@@ -13,3 +13,10 @@ scanner = 127.0.0.1
 scan_list = scans.json
 sleep_period = 5
 days_ago = 30
+ingest_events = true
+
+[grid]
+secret = 
+key = 
+task_schedule_id = 
+

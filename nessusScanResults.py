@@ -69,10 +69,10 @@ class integration(object):
         try:
             r = requests.post(url = token_url, data = TOKENPARAMS, verify = False)
         except Exception as e:
-            self.ds.log('ERROR', "Exception {0}".format(str(e)))
+            self.ds.logger.error("Exception {0}".format(str(e)))
             return None
         if not r or r.status_code != 200:
-            self.ds.log('WARNING',
+            self.ds.logger.warning(
                     "Received unexpected " + str(r) + " response from Nessus Server {0}.".format(
                     token_url))
             return None
@@ -82,23 +82,23 @@ class integration(object):
             return token
         except Exception as e:
                 traceback.print_exc()
-                self.ds.log("ERROR", "Failed to get token")
-                self.ds.log('ERROR', "Exception {0}".format(str(e)))
+                self.ds.logger.error("Failed to get token")
+                self.ds.logger.error("Exception {0}".format(str(e)))
 
     def get_folders(self, scanner):
         URL = "https://" + scanner + ":8834" + '/folders'
         try:
             t = requests.get(url = URL, headers=self.headers, verify = False)
         except Exception as e:
-            self.ds.log('ERROR', "Exception {0}".format(str(e)))
+            self.ds.logger.error("Exception {0}".format(str(e)))
             return None
         if not t or t.status_code != 200:
-            self.ds.log('WARNING',
+            self.ds.logger.warning(
                     "Received unexpected " + str(t) + " response from Nessus Server {0}.".format(
                     URL))
             return None
         jsonFolder = t.json()
-        self.ds.log('INFO', 'Folders: ' + str(jsonFolder))
+        self.ds.logger.info('Folders: ' + str(jsonFolder))
         return jsonFolder['folders']
 
     def get_scan_list(self, scanner, folder_id):
@@ -109,10 +109,10 @@ class integration(object):
         try:
             t = requests.get(url = URL, headers=self.headers, verify = False)
         except Exception as e:
-            self.ds.log('ERROR', "Exception {0}".format(str(e)))
+            self.ds.logger.error("Exception {0}".format(str(e)))
             return None
         if not t or t.status_code != 200:
-            self.ds.log('WARNING',
+            self.ds.logger.warning(
                     "Received unexpected " + str(t) + " response from Nessus Server {0}.".format(
                     URL))
             return None
@@ -128,10 +128,10 @@ class integration(object):
         try:
             r = requests.post(url = URL, headers=self.headers, data = json.dumps(self.payload), verify = False)
         except Exception as e:
-            self.ds.log('ERROR', "Exception {0}".format(str(e)))
+            self.ds.logger.error("Exception {0}".format(str(e)))
             return None
         if not r or r.status_code != 200:
-            self.ds.log('WARNING',
+            self.ds.logger.warning(
                     "Received unexpected " + str(r) + " response from Nessus Server {0}.".format(
                     URL))
             return None
@@ -145,10 +145,10 @@ class integration(object):
             try:
                 t = requests.get(url = URL, headers=self.headers, verify = False)
             except Exception as e:
-                self.ds.log('ERROR', "Exception {0}".format(str(e)))
+                self.ds.logger.error("Exception {0}".format(str(e)))
                 return None
             if not t or t.status_code != 200:
-                self.ds.log('WARNING',
+                self.ds.logger.warning(
                     "Received unexpected " + str(t) + " response from Nessus Server {0}.".format(
                     URL))
                 return None
@@ -161,10 +161,10 @@ class integration(object):
         try:
             d = requests.get(url = URL, headers=self.headers, verify = False)
         except Exception as e:
-            self.ds.log('ERROR', "Exception {0}".format(str(e)))
+            self.ds.logger.error("Exception {0}".format(str(e)))
             return None
         if not d or d.status_code != 200:
-            self.ds.log('WARNING',
+            self.ds.logger.warning(
                     "Received unexpected " + str(d) + " response from Nessus Server {0}.".format(
                     URL))
             return None
@@ -180,9 +180,9 @@ class integration(object):
                         for scan in scan_list:
                             if scan['status'] == 'completed':
                                 scan_download_list.append({'folder': folder['name'], 'id':scan['id'], 'name':scan['name'], 'last_modification_date':scan['last_modification_date']})
-                                self.ds.log("INFO", "Collecting Scans from folder " + folder['name'] + '(' + str(folder['id']) + '): ' + scan['name'] + '(' + str(scan['id']) + ') - ' + (datetime.utcfromtimestamp(int(scan['last_modification_date']))).strftime('%Y-%m-%d %H%M%S'))
+                                self.ds.logger.info("Collecting Scans from folder " + folder['name'] + '(' + str(folder['id']) + '): ' + scan['name'] + '(' + str(scan['id']) + ') - ' + (datetime.utcfromtimestamp(int(scan['last_modification_date']))).strftime('%Y-%m-%d %H%M%S'))
                     else:
-                        self.ds.log("INFO", "Collecting Scans from folder " + folder['name'] + '(' + str(folder['id']) + '): ' + 'None')
+                        self.ds.logger.info("Collecting Scans from folder " + folder['name'] + '(' + str(folder['id']) + '): ' + 'None')
         return scan_download_list
 
 
@@ -192,8 +192,8 @@ class integration(object):
                     scan_list = json.load(json_file)
         except Exception as e:
             traceback.print_exc()
-            self.ds.log("ERROR", "Failed to load db_json_file + " + filename)
-            self.ds.log('ERROR', "Exception {0}".format(str(e)))
+            self.ds.logger.error("Failed to load db_json_file + " + filename)
+            self.ds.logger.error("Exception {0}".format(str(e)))
         return scan_list
 
 
@@ -222,9 +222,29 @@ class integration(object):
                     asset['Description'] = ''
                     asset_list.append(asset)
 
+    def upload_nessus_to_ticket(file_name):
+
+        tickets = self.ds.searchTickets(criteria = {"state":["Open"],"task_schedule_id":self.ds.config_get('grid', 'task_schedule_id')})
+        if tickets == None:
+            self.ds.logger.error('Error searching tickets')
+        this_ticket = None
+        for ticket in tickets:
+            this_ticket = ticket
+        if 'slug_id' not in this_ticket.keys():
+            self.ds.logger.info('Error getting  ticket id from search list')
+            return
+        ticket_id = this_ticket['slug_id']
+        self.ds.logger.info('Found ticket ' + str(ticket_id) + '. Uploading scan ' + file_name)
+
+        if not self.ds.uploadFileToTicket(ticket_id, file_name):
+            self.ds.logger.error('Failed uploading file')
+        return
+
     def nessus_main(self): 
 
-        # Get JDBC Config info
+        # Get nessus Config info
+        self.upload_scans_to_grid = False
+
         try:
             self.user = self.ds.config_get('nessus', 'user')
             self.password = self.ds.config_get('nessus', 'password')
@@ -233,6 +253,12 @@ class integration(object):
             self.scan_list_file = self.ds.config_get('nessus', 'scan_list')
             self.sleep_period = self.ds.config_get('nessus', 'sleep_period')
             self.days_ago = self.ds.config_get('nessus', 'days_ago')
+            ingest_events = self.ds.config_get('nessus', 'ingest_events')
+            if ingest_events.lower() == 'true':
+                self.ingest_events = True
+            else:
+                self.ingest_events = False
+
             self.last_run = self.ds.get_state(self.state_dir)
 
             self.time_format = "%Y-%m-%d %H:%M:%S"
@@ -240,14 +266,22 @@ class integration(object):
             current_time = time.time()
 
             if self.last_run == None:
-                self.ds.log("INFO", "No previous state.  Collecting logs for last " + str(self.days_ago) + " days")
+                self.ds.logger.info("No previous state.  Collecting logs for last " + str(self.days_ago) + " days")
                 #self.last_run = (datetime.utcfromtimestamp((current_time - ( 60 * 60 * 24 * int(self.days_ago))))).strftime(self.time_format)
                 self.last_run = current_time - ( 60 * 60 * 24 * int(self.days_ago))
             self.current_run = current_time
         except Exception as e:
                 traceback.print_exc()
-                self.ds.log("ERROR", "Failed to get required configurations")
-                self.ds.log('ERROR', "Exception {0}".format(str(e)))
+                self.ds.logger.error("Failed to get required configurations")
+                self.ds.logger.error("Exception {0}".format(str(e)))
+
+        try:
+            self.grid_secret = self.ds.config_get('grid', 'secret')
+            self.grid_key = self.ds.config_get('grid', 'key')
+            self.grid_task_schedule_id = self.ds.config_get('grid', 'task_schedule_id')
+            self.upload_scans_to_grid = True
+        except Exception as e:
+                self.ds.logger.error("Failed to get required configurations")
 
 
         self.scan_list = self.get_scans_list(self.scan_list_file)
@@ -255,13 +289,13 @@ class integration(object):
 
             self.token = self.get_token(scanner)
             if self.token == None:
-                self.ds.log('ERROR', "Failed to get token for scanner: " + scanner)
+                self.ds.logger.error("Failed to get token for scanner: " + scanner)
                 return
             self.headers = {'X-Cookie': self.token, 'Content-type': 'application/json', 'Accept': 'text/plain'}
 
             folders = self.get_folders(scanner)
             if folders == None:
-                self.ds.log('ERROR', "No folders found")
+                self.ds.logger.error("No folders found")
                 return
             self.scan_download_list = self.get_scan_download_list(scanner, folders)
 
@@ -269,17 +303,21 @@ class integration(object):
             for scan in self.scan_download_list:
                 scan_time = (datetime.utcfromtimestamp(int(scan['last_modification_date']))).strftime('%Y-%m-%dT%H:%M:%S') + 'Z'
                 filename = scan['folder'] + '-' + scan['name'] + '-' + scan_time
-                #self.get_scan(scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='nessus')
-                self.get_scan(scanner, scan_id = scan['id'], outfile=filename.replace(' ', '_'), out_format='csv')
+                if self.upload_scan_to_grid:
+                    nessus_filename  = filename.replace(' ', '_')+".nessus"
+                    self.get_scan(scan_id = scan['id'], outfile=nessus_filename)
+                    if not self.keep_files:
+                        os.remove(nessus_filename)
+                if self.ingest_events:
+                    csv_filename  = filename.replace(' ', '_')+".csv"
+                    self.get_scan(scanner, scan_id = scan['id'], outfile=csv_filename)
     
-                self.send_scan_to_grid(scanner, filename=filename.replace(' ', '_')+".csv", scan_time = scan_time)
-                if not self.keep_files:
-                    os.remove(filename.replace(' ', '_')+".csv")
-                    #os.remove(filename.replace(' ', '_')+".nessus")
-
+                    self.send_scan_to_grid(scanner, filename=csv_filename, scan_time = scan_time)
+                    if not self.keep_files:
+                        os.remove(csv_filename)
 
             self.ds.set_state(self.state_dir, self.current_run)
-            self.ds.log('INFO', "Done Sending Notifications")
+            self.ds.logger.info("Done Sending Notifications")
 
 
     def run(self):
@@ -289,13 +327,13 @@ class integration(object):
             try:
                 fcntl.lockf(fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except IOError:
-                self.ds.log('ERROR', "An instance of this integration is already running")
+                self.ds.logger.error("An instance of this integration is already running")
                 # another instance is running
                 sys.exit(0)
             self.nessus_main()
         except Exception as e:
             traceback.print_exc()
-            self.ds.log('ERROR', "Exception {0}".format(str(e)))
+            self.ds.logger.error("Exception {0}".format(str(e)))
             return
     
     def usage(self):
@@ -343,7 +381,7 @@ class integration(object):
         except Exception as e:
             traceback.print_exc()
             try:
-                self.ds.log('ERROR', 'ERROR: ' + str(e))
+                self.ds.logger.error('ERROR: ' + str(e))
             except:
                 pass
 
