@@ -11,6 +11,7 @@ import csv
 import requests
 from random import randrange
 from datetime import datetime
+import zipfile
 
 from six import PY2
 
@@ -225,6 +226,16 @@ class integration(object):
 
     def upload_nessus_to_ticket(self, file_name):
 
+        size = os.path.getsize(file_name)
+        if size > 15728640:
+            self.logger.info('File is larger than 15MB, trying to compress: ' + file_name)
+            try:
+                file_name = self.zipFile(file_name)
+            except:
+                self.logger.error('Failed to zip the file: ' + file_name)
+                self.logger.error("%s" %(traceback.format_exc().replace('\n',';')))
+                return None
+
         tickets = self.ds.searchTickets(criteria = {"state":["Open"],"task_schedule_id":self.grid_task_schedule_id})
         if tickets == None:
             self.ds.logger.error('Error searching tickets')
@@ -240,6 +251,21 @@ class integration(object):
         if not self.ds.uploadFileToTicket(ticket_id, file_name):
             self.ds.logger.error('Failed uploading file')
         return
+
+    def zipFile(self, file_name):
+        zipped_file = file_name + '.zip'
+        try:
+            zipf = zipfile.ZipFile(zipped_file, 'w')
+            zipf.write(file_name)
+            zipf.close()
+            os.remove(file_name)
+        except:
+            self.logger.error('Failed to zip the file: ' + file_name)
+            self.logger.error("%s" %(traceback.format_exc().replace('\n',';')))
+            return None
+        return zipped_file
+
+
 
     def nessus_main(self): 
 
