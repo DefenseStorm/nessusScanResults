@@ -280,7 +280,10 @@ class integration(object):
             self.grid_secret = self.ds.config_get('grid', 'secret')
             self.grid_key = self.ds.config_get('grid', 'key')
             self.grid_task_schedule_id = self.ds.config_get('grid', 'task_schedule_id')
-            self.upload_scans_to_grid = True
+            if (self.grid_secret != '') and (self.grid_key != '') and (self.grid_task_schedule_id != ''):
+                self.upload_scans_to_grid = True
+            else:
+                self.ds.logger.info("Incomplete config for uploading scan to ticket...skipping")
         except Exception as e:
                 self.ds.logger.error("Failed to get required configurations")
 
