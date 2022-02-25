@@ -228,13 +228,17 @@ class integration(object):
 
         size = os.path.getsize(file_name)
         if size > 15728640:
-            self.logger.info('File is larger than 15MB, trying to compress: ' + file_name)
+            self.ds.logger.info('File is larger than 15MB, trying to compress: ' + file_name)
             try:
                 file_name = self.zipFile(file_name)
+                size = os.path.getsize(file_name)
+                if size > 15728640:
+                    self.ds.logger.error('File is larger than 15MB after compress  Cannot Upload: ' + file_name)
+                    return False
             except:
-                self.logger.error('Failed to zip the file: ' + file_name)
-                self.logger.error("%s" %(traceback.format_exc().replace('\n',';')))
-                return None
+                self.ds.logger.error('Failed to zip the file: ' + file_name)
+                self.ds.logger.error("%s" %(traceback.format_exc().replace('\n',';')))
+                return False
 
         tickets = self.ds.searchTickets(criteria = {"state":["Open"],"task_schedule_id":self.grid_task_schedule_id})
         if tickets == None:
@@ -250,12 +254,12 @@ class integration(object):
 
         if not self.ds.uploadFileToTicket(ticket_id, file_name):
             self.ds.logger.error('Failed uploading file')
-        return
+        return True
 
     def zipFile(self, file_name):
         zipped_file = file_name + '.zip'
         try:
-            zipf = zipfile.ZipFile(zipped_file, 'w')
+            zipf = zipfile.ZipFile(zipped_file, 'w', zipfile.ZIP_DEFLATED)
             zipf.write(file_name)
             zipf.close()
             os.remove(file_name)
@@ -337,7 +341,8 @@ class integration(object):
                 if self.upload_scans_to_grid:
                     nessus_filename  = filename + ".nessus"
                     self.get_scan(scanner, scan_id = scan['id'], outfile=filename, out_format = 'nessus')
-                    self.upload_nessus_to_ticket(nessus_filename)
+                    if not self.upload_nessus_to_ticket(nessus_filename):
+                        self.ds.logger.error('Failed to upload the file to the ticket...continuing')
                     if not self.keep_files:
                         os.remove(nessus_filename)
                 if self.ingest_events:
