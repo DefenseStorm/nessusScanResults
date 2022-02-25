@@ -342,10 +342,13 @@ class integration(object):
                     nessus_filename  = filename + ".nessus"
                     self.get_scan(scanner, scan_id = scan['id'], outfile=filename, out_format = 'nessus')
                     uploaded_filename == self.upload_nessus_to_ticket(nessus_filename)
-                    if filename == None:
+                    if uploaded_filename == None:
                         self.ds.logger.error('Failed to upload the file to the ticket...continuing')
-                    if not self.keep_files:
-                        os.remove(uploaded_filename)
+                        if not self.keep_files:
+                            os.remove(nessus_filename)
+                    else:
+                        if not self.keep_files:
+                            os.remove(uploaded_filename)
                 if self.ingest_events:
                     csv_filename  = filename+".csv"
                     self.get_scan(scanner, scan_id = scan['id'], outfile=filename, out_format = 'csv')
