@@ -225,7 +225,7 @@ class integration(object):
                     asset_list.append(asset)
 
     def upload_nessus_to_ticket(self, file_name):
-
+        '''
         size = os.path.getsize(file_name)
         if size > 15728640:
             self.ds.logger.info('File is larger than 15MB, trying to compress: ' + file_name)
@@ -239,7 +239,7 @@ class integration(object):
                 self.ds.logger.error('Failed to zip the file: ' + file_name)
                 self.ds.logger.error("%s" %(traceback.format_exc().replace('\n',';')))
                 return None
-
+        '''
         tickets = self.ds.searchTickets(criteria = {"state":["Open"],"task_schedule_id":self.grid_task_schedule_id})
         if tickets == None:
             self.ds.logger.error('Error searching tickets')
