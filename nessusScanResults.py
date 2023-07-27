@@ -240,7 +240,7 @@ class integration(object):
                 self.ds.logger.error("%s" %(traceback.format_exc().replace('\n',';')))
                 return None
         '''
-        tickets = self.ds.searchTickets(criteria = {"state":["Open"],"task_schedule_id":self.grid_task_schedule_id})
+        tickets = self.ds.searchTickets(criteria = {"state":["New"],"task_schedule_id":self.grid_task_schedule_id})
         if tickets == None:
             self.ds.logger.error('Error searching tickets')
         this_ticket = None
